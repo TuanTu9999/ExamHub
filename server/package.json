@@ -1,8 +1,8 @@
 {
-  "type": "module",
   "name": "examhub-server",
   "version": "1.0.0",
-  "description": "ExamHub Backend — Express + MySQL + Redis",
+  "type": "module",
+  "description": "ExamHub Backend",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -29,7 +29,6 @@
     "nodemon": "^3.1.0"
   },
   "engines": {
-    "node": ">=18.0.0"
-  },
-  "type": "module"
+    "node": ">=18.0.0 <23.0.0"
+  }
 }
