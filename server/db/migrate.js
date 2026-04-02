@@ -1,6 +1,4 @@
 // server/db/migrate.js
-// ── Database migration script ──────────────────────────────
-
 import 'dotenv/config';
 import { query, pool } from '../config/db.js';
 import fs from 'fs/promises';
@@ -14,47 +12,26 @@ async function migrate() {
   console.log('🔄 Bắt đầu migration database...');
   
   try {
-    // Đọc file schema.sql
-    const schemaPath = path.join(__dirname, 'schema.sql');
+    // Đọc file schema cho PostgreSQL
+    const schemaPath = path.join(__dirname, 'schema.pg.sql');
     const schema = await fs.readFile(schemaPath, 'utf8');
     
-    // Tách các câu lệnh SQL (split by semicolon)
-    const statements = schema
-      .split(';')
-      .filter(stmt => stmt.trim().length > 0)
-      .map(stmt => stmt.trim());
-    
-    let executed = 0;
+    // Chạy từng câu lệnh
+    const statements = schema.split(';').filter(stmt => stmt.trim().length > 0);
     
     for (const statement of statements) {
-      // Bỏ qua comments
-      if (statement.startsWith('--')) continue;
-      
+      if (statement.trim().startsWith('--')) continue;
       try {
         await query(statement);
-        executed++;
         console.log(`✅ Executed: ${statement.substring(0, 50)}...`);
       } catch (err) {
-        // Bỏ qua lỗi table already exists
         if (!err.message.includes('already exists')) {
-          console.warn(`⚠️  Warning: ${err.message}`);
+          console.warn(`⚠️ Warning: ${err.message}`);
         }
       }
     }
     
-    console.log(`\n🎉 Migration hoàn tất! Đã thực thi ${executed} câu lệnh.`);
-    
-    // Kiểm tra kết quả
-    const [tables] = await query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = ? 
-      ORDER BY table_name
-    `, [process.env.DB_NAME || 'examhub']);
-    
-    console.log('\n📊 Các bảng đã tạo:');
-    tables.forEach(t => console.log(`  - ${t.table_name}`));
-    
+    console.log('🎉 Migration hoàn tất!');
   } catch (err) {
     console.error('❌ Migration error:', err);
     process.exit(1);
@@ -63,9 +40,4 @@ async function migrate() {
   }
 }
 
-// Chạy migration nếu được gọi trực tiếp
-if (import.meta.url === `file://${process.argv[1]}`) {
-  migrate();
-}
-
-export default migrate;
+migrate();
