@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
     // Tìm theo username HOẶC email (không phân biệt hoa/thường)
     const [[user]] = await query(
       `SELECT ${SAFE_COLS}, password_hash FROM users
-       WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = 1
+       WHERE (LOWER(username) = $1 OR LOWER(email) = $1) AND is_active = 1
        LIMIT 1`,
       [lc, lc]
     );
@@ -74,7 +74,7 @@ router.post('/register', async (req, res) => {
 
     const lc = username.trim().toLowerCase();
     const [[exists]] = await query(
-      'SELECT id FROM users WHERE LOWER(username) = ? OR LOWER(email) = ? LIMIT 1',
+      'SELECT id FROM users WHERE LOWER(username) = $1 OR LOWER(email) = $1 LIMIT 1',
       [lc, email.toLowerCase()]
     );
     if (exists) {
@@ -82,13 +82,13 @@ router.post('/register', async (req, res) => {
     }
 
     const parts    = name.trim().split(' ');
-    const initials = ((parts[0]?.[0] || '') + (parts.at(-1)?.[0] || '')).toUpperCase() || 'U';
+    const initials = ((parts[0]$1.[0] || '') + (parts.at(-1)$1.[0] || '')).toUpperCase() || 'U';
     const hash     = await bcrypt.hash(password, 12);
-    const defTokens = role === 'teacher' ? 200 : 50;
+    const defTokens = role === 'teacher' $1 200 : 50;
 
     const [result] = await query(
       `INSERT INTO users (username, email, password_hash, name, initials, role, tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $1, $1, $1, $1, $1, $1)`,
       [lc, email.toLowerCase(), hash, name.trim(), initials, role, defTokens]
     );
 
@@ -106,7 +106,7 @@ router.post('/register', async (req, res) => {
 router.get('/me', authenticate, async (req, res) => {
   try {
     const [[user]] = await query(
-      `SELECT ${SAFE_COLS} FROM users WHERE id = ? AND is_active = 1 LIMIT 1`,
+      `SELECT ${SAFE_COLS} FROM users WHERE id = $1 AND is_active = 1 LIMIT 1`,
       [req.user.id]
     );
     if (!user) return res.status(404).json({ error: 'Tài khoản không tồn tại.' });
@@ -125,13 +125,13 @@ router.post('/change-password', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Mật khẩu mới phải ≥ 6 ký tự.' });
     }
     const [[row]] = await query(
-      'SELECT password_hash FROM users WHERE id = ?', [req.user.id]
+      'SELECT password_hash FROM users WHERE id = $1', [req.user.id]
     );
     if (!await bcrypt.compare(oldPassword, row.password_hash)) {
       return res.status(401).json({ error: 'Mật khẩu cũ không đúng.' });
     }
     const hash = await bcrypt.hash(newPassword, 12);
-    await query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.user.id]);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $1', [hash, req.user.id]);
     return res.json({ message: 'Đã đổi mật khẩu thành công.' });
   } catch (err) {
     return res.status(500).json({ error: 'Lỗi server.' });
